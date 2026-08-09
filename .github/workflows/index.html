@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="midnight">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Duo - Private Real-Time Chat 💖</title>
+  
+  <!-- SEO & Mobile PWA Meta -->
+  <meta name="description" content="Simple private real-time chat app for two people. Powered by Supabase & Firebase. Free to deploy on Vercel/Netlify.">
+  <meta name="theme-color" content="#090c15">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
+  <!-- Modern Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Supabase JS Client Browser Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Main Styles -->
+  <link rel="stylesheet" href="styles.css?v=3">
+</head>
+<body>
+
+  <!-- Ambient Glow Background -->
+  <div class="ambient-background">
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+    <div class="particles-container" id="particlesContainer"></div>
+  </div>
+
+  <!-- Main Container -->
+  <div class="app-container">
+
+    <!-- ==================== JOIN / CREATE ROOM SCREEN ==================== -->
+    <div class="screen login-screen active" id="loginScreen">
+      <div class="login-card glass-panel">
+        
+        <!-- Top Action Bar on Login Screen -->
+        <div class="login-top-bar">
+          <span class="backend-badge" id="loginBackendBadge"><i class="fa-solid fa-bolt"></i> Realtime</span>
+          <button type="button" class="btn-icon-glass" id="loginSettingsBtn" onclick="openSettingsModalDirect()" title="Database & Supabase Config">
+            <i class="fa-solid fa-gear"></i>
+          </button>
+        </div>
+
+        <div class="brand-header">
+          <div class="brand-logo">
+            <span class="logo-heart">💖</span>
+          </div>
+          <h1>Duo Chat</h1>
+          <p class="brand-subtitle">Private Real-Time Space • No Registration Needed</p>
+          <div style="margin-top: 10px;">
+            <button type="button" class="btn-link" onclick="openSettingsModalDirect()" style="background: rgba(139, 92, 246, 0.15); padding: 6px 14px; border-radius: 16px; border: 1px solid rgba(139, 92, 246, 0.3);">
+              <i class="fa-solid fa-sliders"></i> Configure Supabase Keys
+            </button>
+          </div>
+        </div>
+
+        <form id="loginForm" onsubmit="return false;">
+          <!-- Room Code Field -->
+          <div class="form-group">
+            <label for="roomCodeInput"><i class="fa-solid fa-key"></i> Secret Room Code</label>
+            <div class="input-with-action">
+              <input type="text" id="roomCodeInput" placeholder="e.g. secret-nest-882" required autocomplete="off">
+              <button type="button" class="btn-icon" id="genPasscodeBtn" title="Generate New Room Code">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+              </button>
+            </div>
+            <small class="help-text">Share this code or link with your partner to chat privately.</small>
+          </div>
+
+          <!-- Profile Setup (Nickname & Avatar) -->
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="nicknameInput"><i class="fa-solid fa-user"></i> Your Nickname</label>
+              <input type="text" id="nicknameInput" placeholder="e.g. Alex" required autocomplete="name">
+            </div>
+            
+            <div class="form-group width-auto">
+              <label><i class="fa-solid fa-face-smile"></i> Avatar</label>
+              <button type="button" class="avatar-select-btn" id="avatarPickerTrigger">
+                <span id="currentAvatarDisplay">❤️</span>
+                <i class="fa-solid fa-chevron-down"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Avatar Picker Popover -->
+          <div class="avatar-popover hidden" id="avatarPopover">
+            <div class="avatar-grid">
+              <button type="button" class="avatar-opt">❤️</button>
+              <button type="button" class="avatar-opt">💖</button>
+              <button type="button" class="avatar-opt">🐻</button>
+              <button type="button" class="avatar-opt">🐱</button>
+              <button type="button" class="avatar-opt">🌹</button>
+              <button type="button" class="avatar-opt">👑</button>
+              <button type="button" class="avatar-opt">✨</button>
+              <button type="button" class="avatar-opt">🌸</button>
+              <button type="button" class="avatar-opt">🍓</button>
+              <button type="button" class="avatar-opt">💍</button>
+              <button type="button" class="avatar-opt">🐰</button>
+              <button type="button" class="avatar-opt">🐶</button>
+            </div>
+          </div>
+
+          <!-- Enter Room Button -->
+          <button type="submit" class="btn btn-primary btn-block" id="joinRoomBtn">
+            <span>Join Private Room</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </form>
+
+        <div class="login-footer">
+          <button type="button" class="btn-link" id="copyInviteLinkBtn">
+            <i class="fa-solid fa-share-nodes"></i> Copy Shareable Invite Link
+          </button>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ==================== MAIN CHAT SCREEN ==================== -->
+    <div class="screen chat-screen" id="chatScreen">
+
+      <!-- Header Bar -->
+      <header class="chat-header glass-panel">
+        <div class="header-partner-info">
+          <div class="partner-avatar-wrapper">
+            <span class="partner-avatar" id="headerPartnerAvatar">💖</span>
+            <span class="status-indicator offline" id="headerStatusIndicator"></span>
+          </div>
+
+          <div class="partner-text-meta">
+            <div class="partner-name-row">
+              <h2 id="headerPartnerName">Partner</h2>
+              <span class="backend-badge" id="backendBadge"><i class="fa-solid fa-bolt"></i> Realtime</span>
+            </div>
+            <p class="partner-status-text" id="headerPartnerStatus">Waiting for partner to connect...</p>
+          </div>
+        </div>
+
+        <!-- Action Controls -->
+        <div class="header-actions">
+          <button type="button" class="btn-icon-glass" id="shareHeaderBtn" title="Share Invite Link">
+            <i class="fa-solid fa-user-plus"></i>
+          </button>
+
+          <button type="button" class="btn-icon-glass" id="settingsBtn" onclick="openSettingsModalDirect()" title="Settings & Free Database Config">
+            <i class="fa-solid fa-gear"></i>
+          </button>
+        </div>
+      </header>
+
+
+      <!-- Chat Main Feed -->
+      <main class="chat-main" id="chatMain">
+        <!-- Banner when waiting for second person -->
+        <div class="waiting-banner glass-panel" id="waitingBanner">
+          <div class="waiting-icon">
+            <i class="fa-solid fa-paper-plane pulse-anim"></i>
+          </div>
+          <h3>Waiting for your partner</h3>
+          <p>Share code <code><span id="displayRoomCode"></span></code> or send the invite link below.</p>
+          <button type="button" class="btn btn-secondary btn-sm" id="shareRoomBtn">
+            <i class="fa-solid fa-copy"></i> Copy Share Link
+          </button>
+        </div>
+
+        <!-- Messages Feed Container -->
+        <div class="messages-container" id="messagesContainer"></div>
+
+        <!-- Typing Indicator -->
+        <div class="typing-indicator-bar hidden" id="typingIndicator">
+          <div class="typing-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <span id="typingText">Partner is typing...</span>
+        </div>
+      </main>
+
+
+      <!-- Chat Footer / Input Area -->
+      <footer class="chat-footer glass-panel">
+
+        <!-- Image Upload Preview Bar -->
+        <div class="image-preview-bar hidden" id="imagePreviewBar">
+          <div class="preview-thumb-container">
+            <img id="imagePreviewImg" src="" alt="Preview">
+            <button type="button" class="btn-remove-preview" id="removeImageBtn">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+          <span class="preview-text">Photo selected</span>
+        </div>
+
+        <!-- Sticker / Quick Emoji Drawer -->
+        <div class="sticker-drawer hidden" id="stickerDrawer">
+          <div class="quick-pills-grid" id="quickPillsGrid">
+            <button type="button" class="quick-pill">Hey! 👋</button>
+            <button type="button" class="quick-pill">I love you! ❤️</button>
+            <button type="button" class="quick-pill">Miss you 🥺</button>
+            <button type="button" class="quick-pill">Good morning! 🌅</button>
+            <button type="button" class="quick-pill">Goodnight! 🌙✨</button>
+            <button type="button" class="quick-pill">On my way! 🏃💨</button>
+            <button type="button" class="quick-pill">Send photo! 📸</button>
+          </div>
+        </div>
+
+        <!-- Input Controls Grid -->
+        <div class="input-controls">
+          <button type="button" class="btn-input-action" id="toggleStickersBtn" title="Quick Emojis">
+            <i class="fa-solid fa-face-smile"></i>
+          </button>
+
+          <!-- Image File Input -->
+          <input type="file" id="imageFileInput" accept="image/*" class="hidden">
+          <button type="button" class="btn-input-action" id="attachImageBtn" title="Attach Photo">
+            <i class="fa-solid fa-image"></i>
+          </button>
+
+          <div class="textarea-wrapper">
+            <textarea id="messageInput" placeholder="Type a message..." rows="1" autocomplete="off"></textarea>
+          </div>
+
+          <button type="button" class="btn-send" id="sendMsgBtn" title="Send Message">
+            <i class="fa-solid fa-paper-plane"></i>
+          </button>
+        </div>
+      </footer>
+
+    </div>
+
+
+    <!-- ==================== SETTINGS & FREE DATABASE CONFIG MODAL ==================== -->
+    <div class="modal-overlay hidden" id="settingsModalOverlay" onclick="if(event.target===this) closeSettingsModalDirect()">
+      <div class="modal-card glass-panel">
+        <div class="modal-header">
+          <h3><i class="fa-solid fa-sliders"></i> App & Free Database Settings</h3>
+          <button type="button" class="btn-icon" id="closeSettingsBtn" onclick="closeSettingsModalDirect()">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="modal-body">
+
+          <!-- Database Provider Selector -->
+          <div class="setting-item">
+            <label><i class="fa-solid fa-database"></i> Database & Realtime Provider</label>
+            <select id="dbProviderSelect" class="select-input">
+              <option value="supabase">Supabase (Recommended Free Realtime & Storage)</option>
+              <option value="firebase">Firebase (Firestore & Storage)</option>
+              <option value="socket">Local / WebSocket Server Fallback</option>
+            </select>
+          </div>
+
+          <!-- Supabase Config Section -->
+          <div class="config-section" id="supabaseConfigSection">
+            <div class="form-group">
+              <label for="supabaseUrlInput">Supabase Project URL</label>
+              <input type="text" id="supabaseUrlInput" placeholder="https://xyz.supabase.co">
+            </div>
+            <div class="form-group">
+              <label for="supabaseKeyInput">Supabase Anon Key</label>
+              <input type="password" id="supabaseKeyInput" placeholder="eyJhbGciOiJIUzI1NiI...">
+            </div>
+            <small class="help-text">Create a free Supabase project at <a href="https://supabase.com" target="_blank" style="color:var(--accent-secondary);">supabase.com</a> for zero-server Vercel/Netlify hosting.</small>
+          </div>
+
+          <!-- Theme Selector -->
+          <div class="setting-item">
+            <label><i class="fa-solid fa-palette"></i> Dark Mode Theme</label>
+            <div class="theme-options-grid">
+              <button type="button" class="theme-chip active" data-set-theme="midnight">Midnight Dark</button>
+              <button type="button" class="theme-chip" data-set-theme="rose">Rose Quartz</button>
+              <button type="button" class="theme-chip" data-set-theme="emerald">Emerald</button>
+              <button type="button" class="theme-chip" data-set-theme="cyber">Cyber Neon</button>
+            </div>
+          </div>
+
+          <button type="button" class="btn btn-primary btn-block" id="saveDbConfigBtn">
+            <i class="fa-solid fa-floppy-disk"></i> Save Settings
+          </button>
+
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ==================== LIGHTBOX IMAGE VIEWER ==================== -->
+    <div class="lightbox-overlay hidden" id="lightboxModal">
+      <button type="button" class="btn-icon btn-lightbox-close" id="closeLightboxBtn">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      <img id="lightboxImg" src="" alt="Full view">
+    </div>
+
+  </div>
+
+  <!-- Direct Global Helper Script for Modal toggling -->
+  <script>
+    function openSettingsModalDirect() {
+      const modal = document.getElementById('settingsModalOverlay');
+      if (modal) modal.classList.remove('hidden');
+      if (window.duoChatApp && window.duoChatApp.openSettingsModal) {
+        window.duoChatApp.openSettingsModal();
+      }
+    }
+    function closeSettingsModalDirect() {
+      const modal = document.getElementById('settingsModalOverlay');
+      if (modal) modal.classList.add('hidden');
+    }
+  </script>
+
+  <!-- Socket.io Script fallback -->
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- Application JS Script -->
+  <script src="app.js?v=3"></script>
+</body>
+</html>
